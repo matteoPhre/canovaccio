@@ -90,6 +90,100 @@ describe('createSagaOrchestrator', () => {
     await expect(result).rejects.toMatchObject({ stepId: 'slow' });
     vi.useRealTimers();
   });
+
+  it('runs consecutive parallel steps together before continuing', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const calls: string[] = [];
+    let releaseParallelSteps: (() => void) | undefined;
+    const parallelStepsComplete = new Promise<void>((resolve) => {
+      releaseParallelSteps = resolve;
+    });
+    const orchestrator = createSagaOrchestrator({
+      id: 'parallel',
+      store,
+      steps: [
+        { id: 'first', parallel: true, execute: async () => { calls.push('first'); await parallelStepsComplete; }, compensate: async () => undefined },
+        { id: 'second', parallel: true, execute: async () => { calls.push('second'); await parallelStepsComplete; }, compensate: async () => undefined },
+        { id: 'after-join', execute: async () => void calls.push('after-join'), compensate: async () => undefined },
+      ],
+    });
+    const result = orchestrator.start(undefined);
+
+    await vi.waitFor(() => expect(calls).toEqual(['first', 'second']));
+    expect(calls).not.toContain('after-join');
+    releaseParallelSteps?.();
+    await result;
+
+    expect(calls).toEqual(['first', 'second', 'after-join']);
+  });
+
+  it('compensates every started step in a failed parallel group', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const compensated: string[] = [];
+    const orchestrator = createSagaOrchestrator({
+      id: 'parallel-failure',
+      store,
+      steps: [
+        { id: 'first', parallel: true, execute: async () => undefined, compensate: async () => void compensated.push('first') },
+        { id: 'second', parallel: true, execute: async () => { throw new Error('unavailable'); }, compensate: async () => void compensated.push('second') },
+      ],
+    });
+
+    await expect(orchestrator.start(undefined)).rejects.toMatchObject({ stepId: 'second' });
+
+    expect(compensated).toEqual(['second', 'first']);
+  });
+
+  it('retries a failed step using its injected backoff and jitter policy', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const execute = vi.fn(async () => {
+      if (execute.mock.calls.length < 3) {
+        throw new Error('transient');
+      }
+    });
+    const backoffMs = vi.fn(() => 0);
+    const jitterMs = vi.fn((delayMs: number) => delayMs);
+    const orchestrator = createSagaOrchestrator({
+      id: 'retry',
+      store,
+      steps: [{
+        id: 'flaky',
+        retry: { maxAttempts: 3, backoffMs, jitterMs },
+        execute,
+        compensate: async () => undefined,
+      }],
+    });
+
+    await orchestrator.start(undefined);
+
+    expect(execute).toHaveBeenCalledTimes(3);
+    expect(backoffMs).toHaveBeenCalledTimes(2);
+    expect(jitterMs).toHaveBeenCalledTimes(2);
+  });
+
+  it('calculates a retry backoff once when jitter is not configured', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const execute = vi.fn(async () => {
+      if (execute.mock.calls.length === 1) {
+        throw new Error('transient');
+      }
+    });
+    const backoffMs = vi.fn(() => 0);
+    const orchestrator = createSagaOrchestrator({
+      id: 'retry-without-jitter',
+      store,
+      steps: [{
+        id: 'flaky',
+        retry: { maxAttempts: 2, backoffMs },
+        execute,
+        compensate: async () => undefined,
+      }],
+    });
+
+    await orchestrator.start(undefined);
+
+    expect(backoffMs).toHaveBeenCalledOnce();
+  });
 });
 
 describe('defineSagaParticipant', () => {
@@ -131,5 +225,14 @@ describe('defineSagaParticipant', () => {
     await participant.handleCompensation('payment.failed', { value: 1 }, choreographyContext('compensation'));
 
     expect(compensate).toHaveBeenCalledOnce();
+  });
+
+  it('exposes opt-in event idempotency through the testing store', async () => {
+    const store = new InMemorySagaStateStore();
+
+    await expect(store.hasProcessed('idempotency', 'order.created')).resolves.toBe(false);
+    await store.markProcessed('idempotency', 'order.created');
+
+    await expect(store.hasProcessed('idempotency', 'order.created')).resolves.toBe(true);
   });
 });

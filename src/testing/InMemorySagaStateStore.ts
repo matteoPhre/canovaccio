@@ -5,6 +5,7 @@ export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<
   private readonly states = new Map<string, TState>();
   private readonly statuses = new Map<string, SagaStatus>();
   private readonly triggers = new Map<string, Set<string>>();
+  private readonly processedEvents = new Map<string, Set<string>>();
 
   async save(sagaId: string, state: TState): Promise<void> {
     this.states.set(sagaId, state);
@@ -30,6 +31,16 @@ export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<
 
   async getPendingTriggers(sagaId: string): Promise<string[]> {
     return [...(this.triggers.get(sagaId) ?? [])];
+  }
+
+  async hasProcessed(sagaId: string, eventName: string): Promise<boolean> {
+    return this.processedEvents.get(sagaId)?.has(eventName) ?? false;
+  }
+
+  async markProcessed(sagaId: string, eventName: string): Promise<void> {
+    const events = this.processedEvents.get(sagaId) ?? new Set<string>();
+    events.add(eventName);
+    this.processedEvents.set(sagaId, events);
   }
 
   /** TODO v1.x: used for recovery-on-boot and monitoring. */

@@ -15,6 +15,10 @@ export interface SagaStateStore<TState = unknown> {
   markFailed(sagaId: string, reason: unknown): Promise<void>;
   recordTrigger(sagaId: string, eventName: string, payload: unknown): Promise<void>;
   getPendingTriggers(sagaId: string): Promise<string[]>;
+  /** Reports whether the consumer has already marked an event as processed. */
+  hasProcessed?(sagaId: string, eventName: string): Promise<boolean>;
+  /** Marks an event as processed for consumer-managed idempotency. */
+  markProcessed?(sagaId: string, eventName: string): Promise<void>;
   /** TODO v1.x: used for recovery-on-boot and monitoring. */
   query?(filter: { status?: SagaStatus }): Promise<TState[]>;
 }

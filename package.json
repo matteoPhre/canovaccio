@@ -1,0 +1,59 @@
+{
+  "name": "@matteophre/canovaccio",
+  "version": "0.0.1",
+  "description": "Zero-dependency TypeScript engine for SAGA patterns (orchestration and choreography)",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matteoPhre/canovaccio.git"
+  },
+  "homepage": "https://github.com/matteoPhre/canovaccio#readme",
+  "bugs": {
+    "url": "https://github.com/matteoPhre/canovaccio/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "saga",
+    "saga-pattern",
+    "orchestration",
+    "choreography",
+    "distributed-transactions",
+    "typescript",
+    "zero-dependencies"
+  ],
+  "author": "Matteo Selleri",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.4.0"
+  }
+}

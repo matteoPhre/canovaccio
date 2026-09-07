@@ -160,6 +160,30 @@ describe('createSagaOrchestrator', () => {
     expect(backoffMs).toHaveBeenCalledTimes(2);
     expect(jitterMs).toHaveBeenCalledTimes(2);
   });
+
+  it('calculates a retry backoff once when jitter is not configured', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const execute = vi.fn(async () => {
+      if (execute.mock.calls.length === 1) {
+        throw new Error('transient');
+      }
+    });
+    const backoffMs = vi.fn(() => 0);
+    const orchestrator = createSagaOrchestrator({
+      id: 'retry-without-jitter',
+      store,
+      steps: [{
+        id: 'flaky',
+        retry: { maxAttempts: 2, backoffMs },
+        execute,
+        compensate: async () => undefined,
+      }],
+    });
+
+    await orchestrator.start(undefined);
+
+    expect(backoffMs).toHaveBeenCalledOnce();
+  });
 });
 
 describe('defineSagaParticipant', () => {

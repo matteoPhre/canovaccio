@@ -22,8 +22,8 @@ export async function executeWithRetry(
         throw error;
       }
 
-      const delayMs = retry.jitterMs?.(retry.backoffMs(attempt, error), attempt, error)
-        ?? retry.backoffMs(attempt, error);
+      const backoffDelayMs = retry.backoffMs(attempt, error);
+      const delayMs = retry.jitterMs?.(backoffDelayMs, attempt, error) ?? backoffDelayMs;
       await waitForRetry(delayMs, externalSignal);
     }
   }

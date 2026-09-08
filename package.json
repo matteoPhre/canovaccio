@@ -1,6 +1,6 @@
 {
   "name": "@matteophre/canovaccio",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Zero-dependency TypeScript engine for SAGA patterns (orchestration and choreography)",
   "type": "module",
   "main": "./dist/index.cjs",

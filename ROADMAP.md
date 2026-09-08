@@ -10,7 +10,7 @@ MVP - core structure
 
 ---
 
-## v0.0.2 - in development
+## v0.0.2 - released
 
 Parallel steps and resilience
 

@@ -16,6 +16,12 @@ export interface SagaStateStore<TState = unknown> {
   load(sagaId: string): Promise<TState | null>;
   markCompleted(sagaId: string): Promise<void>;
   markFailed(sagaId: string, reason: unknown, status?: SagaFailureStatus): Promise<void>;
+  /**
+   * Records an event received for a choreography join.
+   *
+   * @param payload Reserved for future join strategies based on event content;
+   * ignored by the built-in store.
+   */
   recordTrigger(sagaId: string, eventName: string, payload: unknown): Promise<void>;
   getPendingTriggers(sagaId: string): Promise<string[]>;
   /** Reports whether the consumer has already marked an event as processed. */

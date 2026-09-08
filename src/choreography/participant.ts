@@ -37,6 +37,7 @@ export function defineSagaParticipant<TEvent>(
 
       const trigger = options.triggers.find((candidate) => candidate.event === eventName);
       if (trigger?.required === false) {
+        // Optional trigger: does not contribute to the join-all gate, executes immediately.
         await execute(eventName, event, ctx);
         return;
       }

@@ -1,4 +1,4 @@
-import { SagaCompensationError, SagaStepError } from './errors.js';
+import { SagaCompensationError, SagaRecoveryError, SagaStepError } from './errors.js';
 import type {
   OrchestratorStep,
   SagaOrchestrationState,
@@ -40,8 +40,9 @@ export function createSagaOrchestrator<TCtx>(
       } catch (cause: unknown) {
         const error = new SagaCompensationError(step.id, cause, originalError);
         state.status = 'COMPENSATION_FAILED';
+        state.activeStepIds = [];
         await persist(sagaId, state);
-        await options.store.markFailed(sagaId, error);
+        await options.store.markFailed(sagaId, error, 'COMPENSATION_FAILED');
         options.logger?.error(error.message, { sagaId, stepId: step.id });
         options.onFailed?.(error, state.context);
         throw error;
@@ -51,7 +52,7 @@ export function createSagaOrchestrator<TCtx>(
     state.status = 'FAILED';
     state.activeStepIds = [];
     await persist(sagaId, state);
-    await options.store.markFailed(sagaId, originalError);
+    await options.store.markFailed(sagaId, originalError, 'FAILED');
     options.onFailed?.(originalError, state.context);
     throw originalError;
   }
@@ -90,6 +91,10 @@ export function createSagaOrchestrator<TCtx>(
       }
       if (state.status === 'COMPLETED') {
         return;
+      }
+      const activeStepIds = state.activeStepIds;
+      if (activeStepIds !== undefined && activeStepIds.length > 0) {
+        await compensate(sagaId, state, new SagaRecoveryError(activeStepIds));
       }
       await run(sagaId, state);
     },

@@ -1,4 +1,4 @@
-import type { SagaStateStore, SagaStatus } from '../shared/types.js';
+import type { SagaFailureStatus, SagaStateStore, SagaStatus } from '../shared/types.js';
 
 /** Minimal state store for tests; production services must inject their own store. */
 export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<TState> {
@@ -19,8 +19,12 @@ export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<
     this.statuses.set(sagaId, 'COMPLETED');
   }
 
-  async markFailed(sagaId: string, _reason: unknown): Promise<void> {
-    this.statuses.set(sagaId, 'FAILED');
+  async markFailed(
+    sagaId: string,
+    _reason: unknown,
+    status: SagaFailureStatus = 'FAILED',
+  ): Promise<void> {
+    this.statuses.set(sagaId, status);
   }
 
   async recordTrigger(sagaId: string, eventName: string, _payload: unknown): Promise<void> {

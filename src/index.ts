@@ -5,7 +5,7 @@ export type {
   SagaParticipantOptions,
   SagaTrigger,
 } from './choreography/types.js';
-export { SagaCompensationError, SagaStepError } from './orchestration/errors.js';
+export { SagaCompensationError, SagaRecoveryError, SagaStepError } from './orchestration/errors.js';
 export { createSagaOrchestrator } from './orchestration/orchestrator.js';
 export type {
   OrchestratorStep,
@@ -13,4 +13,4 @@ export type {
   SagaOrchestrator,
   SagaOrchestratorOptions,
 } from './orchestration/types.js';
-export type { SagaEmit, SagaLogger, SagaStateStore, SagaStatus } from './shared/types.js';
+export type { SagaEmit, SagaFailureStatus, SagaLogger, SagaStateStore, SagaStatus } from './shared/types.js';

@@ -1,10 +1,11 @@
-import type { SagaStateStore, SagaStatus } from '../shared/types.js';
+import type { SagaFailureStatus, SagaStateStore, SagaStatus } from '../shared/types.js';
 
 /** Minimal state store for tests; production services must inject their own store. */
 export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<TState> {
   private readonly states = new Map<string, TState>();
   private readonly statuses = new Map<string, SagaStatus>();
   private readonly triggers = new Map<string, Set<string>>();
+  private readonly processedEvents = new Map<string, Set<string>>();
 
   async save(sagaId: string, state: TState): Promise<void> {
     this.states.set(sagaId, state);
@@ -18,8 +19,12 @@ export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<
     this.statuses.set(sagaId, 'COMPLETED');
   }
 
-  async markFailed(sagaId: string, _reason: unknown): Promise<void> {
-    this.statuses.set(sagaId, 'FAILED');
+  async markFailed(
+    sagaId: string,
+    _reason: unknown,
+    status: SagaFailureStatus = 'FAILED',
+  ): Promise<void> {
+    this.statuses.set(sagaId, status);
   }
 
   async recordTrigger(sagaId: string, eventName: string, _payload: unknown): Promise<void> {
@@ -30,6 +35,16 @@ export class InMemorySagaStateStore<TState = unknown> implements SagaStateStore<
 
   async getPendingTriggers(sagaId: string): Promise<string[]> {
     return [...(this.triggers.get(sagaId) ?? [])];
+  }
+
+  async hasProcessed(sagaId: string, eventName: string): Promise<boolean> {
+    return this.processedEvents.get(sagaId)?.has(eventName) ?? false;
+  }
+
+  async markProcessed(sagaId: string, eventName: string): Promise<void> {
+    const events = this.processedEvents.get(sagaId) ?? new Set<string>();
+    events.add(eventName);
+    this.processedEvents.set(sagaId, events);
   }
 
   /** TODO v1.x: used for recovery-on-boot and monitoring. */

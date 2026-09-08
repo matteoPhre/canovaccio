@@ -20,6 +20,16 @@ Parallel steps and resilience
 
 ---
 
+## v0.0.3 - released
+
+Lifecycle hardening and operational examples
+
+- **Terminal abort guard** - completed and failed sagas do not run compensation again
+- **Parallel failure control flow** - failed fan-out groups stop before any failed step is persisted as completed
+- **Recovery documentation and examples** - explicit startup recovery and terminal-safe abort patterns
+
+---
+
 ## v0.1.0 - planned
 
 Observability and store queries

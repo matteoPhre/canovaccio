@@ -7,12 +7,15 @@ export type SagaStatus =
   | 'FAILED'
   | 'COMPENSATION_FAILED';
 
+/** The terminal failure states a saga store can persist. */
+export type SagaFailureStatus = 'FAILED' | 'COMPENSATION_FAILED';
+
 /** Persistence boundary supplied by the consuming service. */
 export interface SagaStateStore<TState = unknown> {
   save(sagaId: string, state: TState): Promise<void>;
   load(sagaId: string): Promise<TState | null>;
   markCompleted(sagaId: string): Promise<void>;
-  markFailed(sagaId: string, reason: unknown): Promise<void>;
+  markFailed(sagaId: string, reason: unknown, status?: SagaFailureStatus): Promise<void>;
   recordTrigger(sagaId: string, eventName: string, payload: unknown): Promise<void>;
   getPendingTriggers(sagaId: string): Promise<string[]>;
   /** Reports whether the consumer has already marked an event as processed. */

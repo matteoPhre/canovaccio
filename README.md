@@ -89,6 +89,12 @@ const orderSaga = createSagaOrchestrator({
 
 `maxAttempts` includes the initial execution. `backoffMs` is required when retrying; use the optional `jitterMs` callback to vary the selected delay. Retried executions receive a new merged timeout signal for each attempt.
 
+## Recovery And Compensation
+
+`resume(sagaId)` continues a saga from its persisted completed steps. A parallel group that was active when the process stopped has an unknown outcome, so it is never executed again automatically. Instead, `resume` compensates every active group member in reverse declaration order and rejects with `SagaRecoveryError`. Compensation handlers must therefore be idempotent.
+
+When a compensation handler fails, the orchestrator persists `COMPENSATION_FAILED` and throws `SagaCompensationError`. Store implementations receive that terminal status as the optional third argument to `markFailed`.
+
 ## Consumer-Managed Idempotency
 
 `SagaStateStore` optionally exposes `hasProcessed` and `markProcessed`. They are intentionally not called by the library: a service decides the event identity and the transaction boundary required by its transport and persistence technology.

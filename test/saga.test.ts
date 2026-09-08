@@ -134,6 +134,50 @@ describe('createSagaOrchestrator', () => {
     expect(compensated).toEqual(['second', 'first']);
   });
 
+  it('marks a saga as compensation failed when compensation throws', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const orchestrator = createSagaOrchestrator({
+      id: 'compensation-failure',
+      store,
+      steps: [
+        { id: 'first', execute: async () => undefined, compensate: async () => { throw new Error('cannot undo'); } },
+        { id: 'second', execute: async () => { throw new Error('unavailable'); }, compensate: async () => undefined },
+      ],
+    });
+
+    await expect(orchestrator.start(undefined)).rejects.toMatchObject({ stepId: 'first' });
+
+    await expect(store.query?.({ status: 'COMPENSATION_FAILED' })).resolves.toHaveLength(1);
+  });
+
+  it('compensates an interrupted parallel group instead of executing it again on resume', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    await store.save('interrupted-parallel', {
+      context: undefined,
+      completedStepIds: [],
+      activeStepIds: ['first', 'second'],
+      status: 'RUNNING',
+    });
+    const executed = vi.fn(async () => undefined);
+    const compensated: string[] = [];
+    const orchestrator = createSagaOrchestrator({
+      id: 'unused-by-resume',
+      store,
+      steps: [
+        { id: 'first', parallel: true, execute: executed, compensate: async () => void compensated.push('first') },
+        { id: 'second', parallel: true, execute: executed, compensate: async () => void compensated.push('second') },
+      ],
+    });
+
+    await expect(orchestrator.resume('interrupted-parallel')).rejects.toMatchObject({
+      activeStepIds: ['first', 'second'],
+    });
+
+    expect(executed).not.toHaveBeenCalled();
+    expect(compensated).toEqual(['second', 'first']);
+    await expect(store.load('interrupted-parallel')).resolves.toMatchObject({ status: 'FAILED' });
+  });
+
   it('retries a failed step using its injected backoff and jitter policy', async () => {
     const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
     const execute = vi.fn(async () => {

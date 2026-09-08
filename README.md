@@ -124,4 +124,4 @@ await store.markProcessed?.(event.sagaId, event.id);
 
 ## Examples
 
-See [examples/sequential-orchestration.ts](examples/sequential-orchestration.ts), [examples/parallel-retry-orchestration.ts](examples/parallel-retry-orchestration.ts), and [examples/choreography-and-join.ts](examples/choreography-and-join.ts) for complete, framework-agnostic usage patterns.
+See [examples/sequential-orchestration.ts](examples/sequential-orchestration.ts), [examples/parallel-retry-orchestration.ts](examples/parallel-retry-orchestration.ts), [examples/choreography-and-join.ts](examples/choreography-and-join.ts), [examples/abort-orchestration.ts](examples/abort-orchestration.ts), and [examples/recovery-on-boot.ts](examples/recovery-on-boot.ts) for complete, framework-agnostic usage patterns.

@@ -132,6 +132,25 @@ describe('createSagaOrchestrator', () => {
     await expect(orchestrator.start(undefined)).rejects.toMatchObject({ stepId: 'second' });
 
     expect(compensated).toEqual(['second', 'first']);
+    await expect(store.load('parallel-failure')).resolves.toMatchObject({
+      completedStepIds: [],
+      status: 'FAILED',
+    });
+  });
+
+  it('does not compensate a saga that has already completed', async () => {
+    const store = new InMemorySagaStateStore<SagaOrchestrationState<undefined>>();
+    const compensate = vi.fn(async () => undefined);
+    const orchestrator = createSagaOrchestrator({
+      id: 'completed-saga',
+      store,
+      steps: [{ id: 'first', execute: async () => undefined, compensate }],
+    });
+
+    await orchestrator.start(undefined);
+    await expect(orchestrator.abort('completed-saga')).resolves.toBeUndefined();
+
+    expect(compensate).not.toHaveBeenCalled();
   });
 
   it('marks a saga as compensation failed when compensation throws', async () => {

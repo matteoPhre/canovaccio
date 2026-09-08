@@ -6,6 +6,7 @@ import type {
   SagaOrchestratorOptions,
 } from './types.js';
 import { mergeSignals } from '../shared/signal.js';
+import type { SagaStatus } from '../shared/types.js';
 import { executeWithRetry } from './retry.js';
 
 /** Creates a durable saga orchestrator with sequential and parallel step groups. */
@@ -104,6 +105,10 @@ export function createSagaOrchestrator<TCtx>(
       if (state === null) {
         throw new Error(`Saga "${sagaId}" was not found`);
       }
+      const terminalStatuses: SagaStatus[] = ['COMPLETED', 'FAILED', 'COMPENSATION_FAILED'];
+      if (terminalStatuses.includes(state.status)) {
+        return;
+      }
       await compensate(sagaId, state, new Error(`Saga "${sagaId}" aborted`));
     },
   };
@@ -156,6 +161,7 @@ export function createSagaOrchestrator<TCtx>(
         const error = new SagaStepError(steps[failureIndex].id, failure.reason);
         options.logger?.error(error.message, { sagaId, stepId: steps[failureIndex].id });
         await compensate(sagaId, state, error);
+        return;
       }
     }
 

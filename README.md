@@ -95,6 +95,20 @@ const orderSaga = createSagaOrchestrator({
 
 When a compensation handler fails, the orchestrator persists `COMPENSATION_FAILED` and throws `SagaCompensationError`. Store implementations receive that terminal status as the optional third argument to `markFailed`.
 
+## Recovery On Boot
+
+`SagaStateStore.query()` is reserved for recovery and monitoring integrations planned for v1.x. The library does not invoke it automatically, so a service can decide when and how recovery runs during startup.
+
+```ts
+// At service startup, recover sagas in a non-terminal state.
+const runningSagas = await store.query?.({ status: 'RUNNING' }) ?? [];
+for (const state of runningSagas) {
+  await saga.resume(state.sagaId).catch((err) => logger.error('Recovery failed', { err }));
+}
+```
+
+Compensation handlers must remain idempotent: a service may need to recover a saga after an interrupted process or retry a delivery from its transport.
+
 ## Consumer-Managed Idempotency
 
 `SagaStateStore` optionally exposes `hasProcessed` and `markProcessed`. They are intentionally not called by the library: a service decides the event identity and the transaction boundary required by its transport and persistence technology.
@@ -110,4 +124,4 @@ await store.markProcessed?.(event.sagaId, event.id);
 
 ## Examples
 
-See [examples/sequential-orchestration.ts](examples/sequential-orchestration.ts), [examples/parallel-retry-orchestration.ts](examples/parallel-retry-orchestration.ts), and [examples/choreography-and-join.ts](examples/choreography-and-join.ts) for complete, framework-agnostic usage patterns.
+See [examples/sequential-orchestration.ts](examples/sequential-orchestration.ts), [examples/parallel-retry-orchestration.ts](examples/parallel-retry-orchestration.ts), [examples/choreography-and-join.ts](examples/choreography-and-join.ts), [examples/abort-orchestration.ts](examples/abort-orchestration.ts), and [examples/recovery-on-boot.ts](examples/recovery-on-boot.ts) for complete, framework-agnostic usage patterns.
